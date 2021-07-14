@@ -44,7 +44,8 @@
       use NUOPC_Connector, only: conSS => SetServices
   ! - Handle build time ATM options:
 #ifdef FRONT_FV3
-      use FRONT_FV3,        only: FV3_SS   => SetServices
+      use FRONT_FV3,        only: FV3_SS   => SetServices, &
+                                  FV3_SV   => SetVM
 #endif
 #ifdef FRONT_NEMS_DATM
       use FRONT_NEMS_DATM,  only: DATM_SS  => SetServices
@@ -221,6 +222,7 @@
         use med_internalstate_mod , only : med_id
 #endif
         type(ESMF_GridComp)  :: driver
+        type(ESMF_Info)      :: info
         integer, intent(out) :: rc
 
         ! local variables
@@ -244,6 +246,10 @@
         logical                         :: isPresent
 #endif
         rc = ESMF_SUCCESS
+
+        ! create info object
+        info = ESMF_InfoCreate(rc=rc)
+        if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
         ! query the Component for info
         call ESMF_GridCompGet(driver, name=name, rc=rc)
@@ -340,8 +346,11 @@
           found_comp = .false.
 #ifdef FRONT_FV3
           if (trim(model) == "fv3") then
+            call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
+                 rc=rc)
+            if (ChkErr(rc,__LINE__,u_FILE_u)) return
             call NUOPC_DriverAddComp(driver, trim(prefix), FV3_SS, &
-              petList=petList, comp=comp, rc=rc)
+              FV3_SV, info=info, petList=petList, comp=comp, rc=rc)
             if (ChkErr(rc,__LINE__,u_FILE_u)) return
             found_comp = .true.
           end if
